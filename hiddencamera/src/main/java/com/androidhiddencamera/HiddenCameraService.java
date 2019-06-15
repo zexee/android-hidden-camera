@@ -101,6 +101,16 @@ public abstract class HiddenCameraService extends Service implements CameraCallb
         }
     }
 
+    protected void checkChanged() {
+        if (mCameraPreview != null) {
+            if (mCameraPreview.isSafeToTakePictureInternal()) {
+                mCameraPreview.checkChangedInternal();
+            }
+        } else {
+            throw new RuntimeException("Background camera not initialized. Call startCamera() to initialize the camera.");
+        }
+    }
+
     /**
      * Stop and release the camera forcefully.
      */

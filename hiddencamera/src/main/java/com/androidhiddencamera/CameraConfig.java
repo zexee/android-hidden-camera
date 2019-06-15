@@ -97,6 +97,10 @@ public final class CameraConfig {
         return mImageFile;
     }
 
+    String getCachePath() {
+        return HiddenCameraUtils.getCacheDir(mContext).getAbsolutePath();
+    }
+
     @CameraRotation.SupportedRotation
     int getImageRotation() {
         return mImageRotation;

@@ -17,12 +17,18 @@
 package com.kevalpatel2106.sample;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.KeyguardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import com.androidhiddencamera.CameraConfig;
@@ -59,7 +65,7 @@ public class DemoCamService extends HiddenCameraService {
                 CameraConfig cameraConfig = new CameraConfig()
                         .getBuilder(this)
                         .setCameraFacing(CameraFacing.FRONT_FACING_CAMERA)
-                        .setCameraResolution(CameraResolution.MEDIUM_RESOLUTION)
+                        .setCameraResolution(CameraResolution.LOW_RESOLUTION)
                         .setImageFormat(CameraImageFormat.FORMAT_JPEG)
                         .setCameraFocus(CameraFocus.AUTO)
                         .build();
@@ -72,9 +78,9 @@ public class DemoCamService extends HiddenCameraService {
                         Toast.makeText(DemoCamService.this,
                                 "Capturing image.", Toast.LENGTH_SHORT).show();
 
-                        takePicture();
+                        checkChanged();
                     }
-                }, 2000L);
+                }, 500L);
             } else {
 
                 //Open settings to grant permission for "Draw other apps".
@@ -91,13 +97,31 @@ public class DemoCamService extends HiddenCameraService {
     @Override
     public void onImageCapture(@NonNull File imageFile) {
         Toast.makeText(this,
-                "Captured image size is : " + imageFile.length(),
+                "Captured image size is : " + imageFile.getAbsolutePath(),
                 Toast.LENGTH_SHORT)
                 .show();
 
-        // Do something with the image...
-
         stopSelf();
+    }
+
+    @Override
+    public void onImageChanged(int diff) {
+        Log.i("Waker", "image diff " + diff);
+        if (diff > 3000) {
+            Intent broadcastIntent = new Intent();
+            broadcastIntent.setAction("wake");
+            sendBroadcast(broadcastIntent);
+        }
+
+        new android.os.Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+//                Toast.makeText(DemoCamService.this,
+//                        "Capturing image.", Toast.LENGTH_SHORT).show();
+
+                checkChanged();
+            }
+        }, 500L);
     }
 
     @Override

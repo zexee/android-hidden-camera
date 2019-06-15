@@ -20,6 +20,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.hardware.Camera;
 import android.os.Looper;
 import android.support.annotation.NonNull;
@@ -30,6 +31,14 @@ import android.view.SurfaceView;
 import com.androidhiddencamera.config.CameraResolution;
 import com.androidhiddencamera.config.CameraRotation;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -51,6 +60,7 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
     private CameraConfig mCameraConfig;
 
     private volatile boolean safeToTakePicture = false;
+    private int[] last_raw = null;
 
     CameraPreview(@NonNull Context context, CameraCallbacks cameraCallbacks) {
         super(context);
@@ -241,6 +251,66 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
                                 });
                             }
 
+                            mCamera.startPreview();
+                            safeToTakePicture = true;
+                        }
+                    }).start();
+                }
+            });
+        } else {
+            mCameraCallbacks.onCameraError(CameraError.ERROR_CAMERA_OPEN_FAILED);
+            safeToTakePicture = true;
+        }
+    }
+
+    void checkChangedInternal() {
+        safeToTakePicture = false;
+        if (mCamera != null) {
+            mCamera.takePicture(null, null, new Camera.PictureCallback() {
+                @Override
+                public void onPictureTaken(final byte[] bytes, Camera camera) {
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Read last img
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                            int[] raw = new int[bitmap.getWidth() * bitmap.getHeight()];
+                            bitmap.getPixels(raw, 0,bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+                            if (last_raw != null) {
+                                int diff = 0;
+                                if (raw.length == last_raw.length) {
+                                    for (int i = 0; i < raw.length; ++i) {
+                                        int a = raw[i], b = last_raw[i];
+                                        int ar = Color.red(a);
+                                        int ag = Color.green(a);
+                                        int ab = Color.blue(a);
+                                        int br = Color.red(b);
+                                        int bg = Color.green(b);
+                                        int bb = Color.blue(b);
+
+                                        int d = Math.abs(ar - br);
+                                        if (d > 50) diff += 1;
+                                    }
+                                } else {
+                                    diff = (raw.length - last_raw.length);
+                                }
+                                final int finalDiff = diff;
+                                new android.os.Handler(Looper.getMainLooper()).post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mCameraCallbacks.onImageChanged(finalDiff);
+                                    }
+                                });
+                            } else {
+                                new android.os.Handler(Looper.getMainLooper()).post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mCameraCallbacks.onImageChanged(0);
+                                    }
+                                });
+                            }
+
+                            last_raw = raw.clone();
                             mCamera.startPreview();
                             safeToTakePicture = true;
                         }

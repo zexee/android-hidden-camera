@@ -30,4 +30,6 @@ interface CameraCallbacks {
     void onImageCapture(@NonNull File imageFile);
 
     void onCameraError(@CameraError.CameraErrorCodes int errorCode);
+
+    void onImageChanged(int diff);
 }

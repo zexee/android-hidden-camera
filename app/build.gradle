@@ -9,8 +9,15 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        debug {
+            storeFile file('C:\\Users\\z\\android_key.jks')
+            keyAlias = 'key0'
+            storePassword 'FlyToMe'
+            keyPassword 'FlyToMe'
+        }
+    }
     compileSdkVersion 27
-    buildToolsVersion '27.0.3'
     defaultConfig {
         applicationId "com.kevalpatel2106.sample"
         minSdkVersion 16
